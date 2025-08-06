@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+from streamlit_webrtc import  webrtc_streamer, VideoProcessorBase
 import numpy as np
 import cv2
 from tensorflow.keras.models import load_model
@@ -17,12 +17,15 @@ st.markdown("<h1 style='text-align: center; color: #FF4B4B;'>Facial Emotion Reco
 st.markdown("Upload an image or use your webcam to detect emotions.")
 
 # ------------------ Webcam Detection ------------------ #
-class EmotionDetector(VideoTransformerBase):
+class EmotionDetector(VideoProcessorBase):
     def transform(self, frame):
         img = frame.to_ndarray(format="bgr24")
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
         faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+        if len(faces) == 0:
+            return av.VideoFrame.from_ndarray(img, format="bgr24")
 
         for (x, y, w, h) in faces:
             roi = gray[y:y+h, x:x+w]
@@ -39,13 +42,13 @@ class EmotionDetector(VideoTransformerBase):
             cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
             cv2.putText(img, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (36, 255, 12), 2)
 
-        return img
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 # Show webcam section
 st.markdown("### 📷 Use Webcam:")
 webrtc_streamer(
     key="emotion-detection",
-    video_transformer_factory=EmotionDetector,
+    video_processor_factory=EmotionDetector,
     media_stream_constraints={"video": True, "audio": False}
 )
 
